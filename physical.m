@@ -71,7 +71,7 @@ Q = eye(4);
 % stat kalman init
 nu = nan(2,k_max);
 %nuhat = nan(2,k_max);
-N = 5*eye(4); % why 5? Design parameter? The higher the more we tryst y?
+N = eye(4); % why 5? Design parameter? The higher the more we tryst y?
 R1 = cov(yDataset(1,:));
 R12 = 0; %assume correlation between w and v is 0.
 R2 = cov(yDataset(2,:)); %intensity of noise in v. 4 is its standard deviation. ie most values here are below +-4. check: histogram(v)
@@ -120,7 +120,7 @@ figure(3);
 hold on;
 
 % non stat kalman init
-N = 1*eye(4); %1 leads to better results than 5 and 0.5
+N = eye(4); %1 leads to better results than 5 and 0.5
 
 [P0, ~, ~] = dare(Ad', Cd', N*Q*N', R);
 
