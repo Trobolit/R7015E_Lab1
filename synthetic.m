@@ -49,7 +49,8 @@ for dataset=1:3
     plot(yDataset);
     plot(yhat);
     %print mean square error
-    fprintf('MSE for dataset %d: %d\n',dataset, immse(yhat(2:end),yDataset(1:end-1)') );
+    %fprintf('MSE for dataset %d: %d\n',dataset, immse(yhat(2:end),yDataset(1:end-1)') );
+    fprintf('MSE for dataset %d: %d\n',dataset, immse(yhat,yDataset') );
      % if you offset these one index performance is 10x better.
      
 end
@@ -62,15 +63,24 @@ fprintf('Stationary kalman:\n');
 figure(2);
 hold on;
 
+% R measurment noise.
+% N the way noise propagates through system, design param
+% Q Model/state noise
+% S cov of noises (Q, R).
+
+% | Q  S |
+% | S' R |
+
 % stat kalman init
 nu = nan(1,k_max);
 %nuhat = nan(2,k_max);
-N = 5*eye(2); % why 5? Design parameter? The higher the more we tryst y?
-R1 = N(1);
-R12 = 0; %assume correlation between w and v is 0.
-R2 = 4; %intensity of noise in v. 4 is its standard deviation. ie most values here are below +-4. check: histogram(v)
-[P, ~, ~] = dare(Ad', Cd', N*Q*N', R2);
-Ktilde = P*Cd'/(Cd*P*Cd' + R2);
+N = eye(2); % Design parameter, the more we trust measurments.
+%R1 = N(1); 
+%R12 = 0; %assume correlation between w and v is 0.
+S = [0;0];
+R = 4; %intensity of noise in v. 4 is its standard deviation. ie most values here are below +-4. check: histogram(v)
+[P, ~, ~] = dare(Ad', Cd', Q, R);
+K = (Ad*P*Cd' + N*S)/( Cd*P*Cd' + R);
 
 
 for dataset=1:3
@@ -97,8 +107,8 @@ for dataset=1:3
     for k=1:k_max
         % Update current state estimate
         nu(k) = yDataset(k) - Cd*xhat(:,k);
-        %nuhat(:,k) = (R1*R12/(Cd*P*Cd' + R2))*nu(k); % always 0 since R12=0.
-        xhat(:,k) = xhat(:,k) + Ktilde*nu(k);
+        %nuhat(:,k) = (Q*S/(Cd*P*Cd' + R))*nu(k); % always 0 since S=0.
+        xhat(:,k) = xhat(:,k) + K*nu(k);
         yhat(k) = Cd*xhat(:,k);
         if k<k_max
             % Predict next step using updated current state
@@ -127,10 +137,9 @@ hold on;
 
 % non stat kalman init
 N = 1*eye(2); %1 leads to better results than 5 and 0.5
-R1 = N(1);
-R12 = 0; %assume correlation between w and v is 0.
-R2 = 4; %intensity of noise in v. 4 is its standard deviation. ie most values here are below +-4. check: histogram(v)
-[P0, ~, ~] = dare(Ad', Cd', N*Q*N', R2);
+S = [0;0]; %assume correlation between w and v is 0.
+R = 4; %intensity of noise in v. 4 is its standard deviation. ie most values here are below +-4. check: histogram(v)
+[P0, ~, ~] = dare(Ad', Cd', Q, R);
 
 P = nan(2,2,k_max);
 P(:,:,1) = P0;
@@ -157,7 +166,7 @@ for dataset=1:3
     for k=1:k_max
         
         % update current state
-        K = P(:,:,k)*Cd'/(Cd*P(:,:,k)*Cd' + R2);
+        K = P(:,:,k)*Cd'/(Cd*P(:,:,k)*Cd' + R);
         ytilde(k) = yDataset(k) - Cd*xhat(:,k);
         xhat(:,k) = xhat(:,k) + K*ytilde(k); % This is the most accurate state we can have this iteration given now and last.    
         P(:,:,k) = P(:,:,k) - K*Cd*P(:,:,k);
